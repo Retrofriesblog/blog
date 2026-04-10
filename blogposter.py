@@ -10,6 +10,7 @@ BLOG_DIR = r"C:\Users\blexe\OneDrive\Desktop\blog"
 POSTS_DIR = os.path.join(BLOG_DIR, "posts")
 INDEX_PATH = os.path.join(BLOG_DIR, "index.html")
 TEMPLATE_PATH = os.path.join(BLOG_DIR, "template.html")
+NAV_PATH = os.path.join(BLOG_DIR, "nav.html")
 # ────────────────────────────────────────────────────────────────────────────
 
 
@@ -21,7 +22,6 @@ def slugify(title):
 
 
 def body_to_html(raw):
-    """Convert plain text to HTML. Newlines become <br> tags."""
     lines = raw.split("\n")
     html_lines = []
     for line in lines:
@@ -33,47 +33,31 @@ def body_to_html(raw):
     return "\n            ".join(html_lines)
 
 
-def get_all_html_files():
-    """Get index + all post HTML files."""
-    files = [INDEX_PATH]
-    if os.path.exists(POSTS_DIR):
-        for f in os.listdir(POSTS_DIR):
-            if f.endswith(".html"):
-                files.append(os.path.join(POSTS_DIR, f))
-    return files
-
-
 def build_dropdown_html(entries):
-    """
-    entries: list of (year, month, title, relative_url) tuples, newest first
-    Returns the HTML block to go inside the dropdown menu.
-    """
-    # Group by year → month
     tree = {}
     for year, month, title, url in entries:
         tree.setdefault(year, {}).setdefault(month, []).append((title, url))
 
     lines = []
     for year in sorted(tree.keys(), reverse=True):
-        lines.append(f'<div class="dropdown-year">')
-        lines.append(f'  <span>{year} ▾</span>')
-        lines.append(f'  <div class="submenu">')
+        lines.append('<div class="dropdown-year">')
+        lines.append('  <span>' + year + ' ▾</span>')
+        lines.append('  <div class="submenu">')
         for month in sorted(tree[year].keys(), key=lambda m: datetime.strptime(m, "%B").month, reverse=True):
-            lines.append(f'    <div class="dropdown-month">')
-            lines.append(f'      <span>{month} ▾</span>')
-            lines.append(f'      <div class="submenu">')
+            lines.append('    <div class="dropdown-month">')
+            lines.append('      <span>' + month + ' ▾</span>')
+            lines.append('      <div class="submenu">')
             for title, url in tree[year][month]:
-                lines.append(f'        <a href="{url}">{title}</a>')
-            lines.append(f'      </div>')
-            lines.append(f'    </div>')
-        lines.append(f'  </div>')
-        lines.append(f'</div>')
+                lines.append('        <a href="' + url + '">' + title + '</a>')
+            lines.append('      </div>')
+            lines.append('    </div>')
+        lines.append('  </div>')
+        lines.append('</div>')
 
-    return "\n                        ".join(lines)
+    return "\n            ".join(lines)
 
 
 def parse_entries_from_posts():
-    """Scan the posts folder and build the entry list from filenames + content."""
     entries = []
     if not os.path.exists(POSTS_DIR):
         return entries
@@ -83,7 +67,6 @@ def parse_entries_from_posts():
         fpath = os.path.join(POSTS_DIR, fname)
         with open(fpath, "r", encoding="utf-8") as f:
             content = f.read()
-        # Pull title from <title> tag
         title_match = re.search(r"<h2>(.*?)</h2>", content)
         date_match = re.search(r'<p class="date">(.*?)</p>', content)
         if not title_match or not date_match:
@@ -96,34 +79,27 @@ def parse_entries_from_posts():
             continue
         year = str(date_obj.year)
         month = date_obj.strftime("%B")
-        url = f"posts/{fname}"
+        url = f"/blog/posts/{fname}"
         entries.append((year, month, title, url, date_obj))
-    # Sort newest first
     entries.sort(key=lambda e: e[4], reverse=True)
     return [(y, m, t, u) for y, m, t, u, _ in entries]
 
 
-def update_dropdown_in_file(filepath, dropdown_html, is_post=False):
-    with open(filepath, "r", encoding="utf-8") as f:
-        content = f.read()
-
-    new_block = f"<!-- DROPDOWN_ENTRIES -->\n                        {dropdown_html}\n                        <!-- END_DROPDOWN_ENTRIES -->"
-
-    # Replace between markers if they exist
-    content = re.sub(
-        r"<!-- DROPDOWN_ENTRIES -->.*?<!-- END_DROPDOWN_ENTRIES -->",
-        new_block,
-        content,
-        flags=re.DOTALL
-    )
-    # If no end marker yet (first run), just replace the single marker
-    if "<!-- END_DROPDOWN_ENTRIES -->" not in content:
-        content = content.replace(
-            "<!-- DROPDOWN_ENTRIES -->",
-            f"<!-- DROPDOWN_ENTRIES -->\n                        {dropdown_html}\n                        <!-- END_DROPDOWN_ENTRIES -->"
-        )
-
-    with open(filepath, "w", encoding="utf-8") as f:
+def update_nav_file(dropdown_html):
+    content = """<link href="https://fonts.googleapis.com/css2?family=Anonymous+Pro&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/blog/style.css">
+<style>
+  html, body { margin: 0; padding: 0; background: transparent; }
+</style>
+<nav>
+    <div class="dropdown">
+        <span>Entries &#9662;</span>
+        <div class="menu">
+            """ + dropdown_html + """
+        </div>
+    </div>
+</nav>"""
+    with open(NAV_PATH, "w", encoding="utf-8") as f:
         f.write(content)
 
 
@@ -183,26 +159,23 @@ class BlogPoster(tk.Tk):
     def _build_ui(self):
         pad = {"padx": 16, "pady": 6}
 
-        # Title
         ttk.Label(self, text="Post Title").pack(anchor="w", **pad)
         self.title_var = tk.StringVar()
         self.title_entry = ttk.Entry(self, textvariable=self.title_var, width=60)
         self.title_entry.pack(fill="x", **pad)
 
-        # Date
         ttk.Label(self, text="Date").pack(anchor="w", **pad)
         self.date_var = tk.StringVar(value=datetime.now().strftime("%m/%d/%Y"))
         self.date_entry = ttk.Entry(self, textvariable=self.date_var, width=20)
         self.date_entry.pack(anchor="w", **pad)
 
-        # File path
         ttk.Label(self, text="Output filename (inside posts/)").pack(anchor="w", **pad)
         self.filepath_var = tk.StringVar()
         self.title_var.trace_add("write", self._update_filepath)
+        self.date_var.trace_add("write", self._update_filepath)
         self.filepath_entry = ttk.Entry(self, textvariable=self.filepath_var, width=60)
         self.filepath_entry.pack(fill="x", **pad)
 
-        # Body
         ttk.Label(self, text="Post Body  (Enter = new line)").pack(anchor="w", **pad)
         self.body_text = tk.Text(
             self,
@@ -218,7 +191,6 @@ class BlogPoster(tk.Tk):
         )
         self.body_text.pack(fill="both", expand=True, padx=16, pady=4)
 
-        # Upload button
         upload_btn = tk.Button(
             self,
             text="⬆  Upload Post",
@@ -235,7 +207,6 @@ class BlogPoster(tk.Tk):
         )
         upload_btn.pack(pady=12)
 
-        # Status label
         self.status_var = tk.StringVar(value="")
         self.status_label = ttk.Label(self, textvariable=self.status_var)
         self.status_label.pack()
@@ -257,7 +228,6 @@ class BlogPoster(tk.Tk):
         filename = self.filepath_var.get().strip()
         body_raw = self.body_text.get("1.0", "end").strip()
 
-        # Validate
         if not title:
             messagebox.showerror("Missing title", "Please enter a post title.")
             return
@@ -270,13 +240,11 @@ class BlogPoster(tk.Tk):
             messagebox.showerror("Bad date", "Date must be in MM/DD/YYYY format.")
             return
 
-        # Make posts dir
         os.makedirs(POSTS_DIR, exist_ok=True)
 
         post_path = os.path.join(POSTS_DIR, filename)
-        post_url = f"posts/{filename}"
+        post_url = f"/blog/posts/{filename}"
 
-        # Load template
         with open(TEMPLATE_PATH, "r", encoding="utf-8") as f:
             template = f.read()
 
@@ -286,23 +254,17 @@ class BlogPoster(tk.Tk):
         post_html = post_html.replace("{{DATE}}", date_str)
         post_html = post_html.replace("{{BODY}}", body_html)
 
-        # Write post file
         with open(post_path, "w", encoding="utf-8") as f:
             f.write(post_html)
 
-        # Rebuild entries list (includes new post)
+        # rebuild nav only
         entries = parse_entries_from_posts()
         dropdown_html = build_dropdown_html(entries)
+        update_nav_file(dropdown_html)
 
-        # Update dropdown in all HTML files
-        for html_file in get_all_html_files():
-            is_post = html_file != INDEX_PATH
-            update_dropdown_in_file(html_file, dropdown_html, is_post)
-
-        # Update index latest post
+        # update index latest post
         update_latest_post_on_index(title, date_str, body_html, post_url)
 
-        # Git push
         self.status_var.set("Pushing to GitHub...")
         self.update()
         try:

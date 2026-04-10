@@ -61,3 +61,10 @@ nav {
 .menu a:hover {
     background: #0099ff22;
 }
+
+#nav-frame {
+    width: 100%;
+    height: 40px;
+    border: none;
+    background: transparent;
+}
