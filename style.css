@@ -1,13 +1,19 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
 body {
     background-color: rgb(0, 0, 27);
-  display: flex;
-  justify-content: center;
-
+    display: flex;
+    justify-content: center;
 }
+
 .card {
     margin: 40px auto;
-  background-color: #00183d;
-  color : white;
+    background-color: #00183d;
+    color: white;
     text-shadow: 0 0 30px #0099ff;
     text-align: center;
     width: 50%;
@@ -18,11 +24,16 @@ body {
     font-family: 'Anonymous Pro', monospace;
 }
 
+img {
+    max-width: 100%;
+    border-radius: 8px;
+}
 
 nav {
     color: white;
     font-family: 'Anonymous Pro', monospace;
-    margin-top: 24px;
+    margin-top: 12px;
+    margin-bottom: 4px;
 }
 
 .dropdown {
@@ -30,7 +41,7 @@ nav {
     display: inline-block;
 }
 
-.dropdown span {
+.dropdown > span {
     cursor: pointer;
     padding: 6px 12px;
 }
@@ -45,27 +56,82 @@ nav {
     border-radius: 8px;
     min-width: 160px;
     z-index: 100;
+    text-align: left;
+    padding: 4px 0;
 }
 
-.dropdown:hover .menu {
+.dropdown:hover > .menu {
     display: block;
 }
 
-.menu a {
+/* year submenus */
+.dropdown-year,
+.dropdown-month {
+    position: relative;
+}
+
+.dropdown-year > span,
+.dropdown-month > span {
+    display: block;
+    padding: 8px 14px;
+    cursor: pointer;
+    color: white;
+    text-shadow: 0 0 8px #0099ff;
+}
+
+.dropdown-year > span:hover,
+.dropdown-month > span:hover {
+    background: #0099ff22;
+}
+
+.submenu {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 100%;
+    background: #00183d;
+    border: 1px solid #0099ff44;
+    border-radius: 8px;
+    min-width: 160px;
+    z-index: 101;
+    padding: 4px 0;
+}
+
+.dropdown-year:hover > .submenu,
+.dropdown-month:hover > .submenu {
+    display: block;
+}
+
+.menu a,
+.submenu a {
     display: block;
     padding: 8px 14px;
     color: white;
     text-decoration: none;
+    text-shadow: 0 0 8px #0099ff;
 }
 
-.menu a:hover {
+.menu a:hover,
+.submenu a:hover {
     background: #0099ff22;
 }
 
-#nav-frame {
-    width: 100%;
-    height: 44px;
+hr {
     border: none;
-    background: transparent;
-    overflow: visible;
+    border-top: 1px solid #0099ff33;
+    margin: 16px 0;
+}
+
+.date {
+    color: #88bbff;
+    font-size: 0.9rem;
+}
+
+h2 a {
+    color: white;
+    text-decoration: none;
+}
+
+h2 a:hover {
+    text-decoration: underline;
 }

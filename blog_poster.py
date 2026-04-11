@@ -10,7 +10,6 @@ BLOG_DIR = r"C:\Users\blexe\OneDrive\Desktop\blog"
 POSTS_DIR = os.path.join(BLOG_DIR, "posts")
 INDEX_PATH = os.path.join(BLOG_DIR, "index.html")
 TEMPLATE_PATH = os.path.join(BLOG_DIR, "template.html")
-NAV_PATH = os.path.join(BLOG_DIR, "nav.html")
 # ────────────────────────────────────────────────────────────────────────────
 
 
@@ -54,7 +53,7 @@ def build_dropdown_html(entries):
         lines.append('  </div>')
         lines.append('</div>')
 
-    return "\n            ".join(lines)
+    return "\n                        ".join(lines)
 
 
 def parse_entries_from_posts():
@@ -85,21 +84,33 @@ def parse_entries_from_posts():
     return [(y, m, t, u) for y, m, t, u, _ in entries]
 
 
-def update_nav_file(dropdown_html):
-    content = """<link href="https://fonts.googleapis.com/css2?family=Anonymous+Pro&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/blog/style.css">
-<style>
-  html, body { margin: 0; padding: 0; background: transparent; }
-</style>
-<nav>
-    <div class="dropdown">
-        <span>Entries &#9662;</span>
-        <div class="menu">
-            """ + dropdown_html + """
-        </div>
-    </div>
-</nav>"""
-    with open(NAV_PATH, "w", encoding="utf-8") as f:
+def get_all_html_files():
+    files = [INDEX_PATH]
+    if os.path.exists(POSTS_DIR):
+        for f in os.listdir(POSTS_DIR):
+            if f.endswith(".html"):
+                files.append(os.path.join(POSTS_DIR, f))
+    return files
+
+
+def update_dropdown_in_file(filepath, dropdown_html):
+    with open(filepath, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    new_block = (
+        "<!-- DROPDOWN_ENTRIES -->\n                        "
+        + dropdown_html
+        + "\n                        <!-- END_DROPDOWN_ENTRIES -->"
+    )
+
+    content = re.sub(
+        r"<!-- DROPDOWN_ENTRIES -->.*?<!-- END_DROPDOWN_ENTRIES -->",
+        new_block,
+        content,
+        flags=re.DOTALL
+    )
+
+    with open(filepath, "w", encoding="utf-8") as f:
         f.write(content)
 
 
@@ -107,13 +118,15 @@ def update_latest_post_on_index(title, date_str, body_html, post_url):
     with open(INDEX_PATH, "r", encoding="utf-8") as f:
         content = f.read()
 
-    latest_block = f"""<!-- LATEST_POST -->
-            <h2><a href="{post_url}">{title}</a></h2>
-            <hr>
-            <p class="date">{date_str}</p>
-            <br>
-            {body_html}
-            <!-- END_LATEST_POST -->"""
+    latest_block = (
+        "<!-- LATEST_POST -->\n"
+        f'            <h2><a href="{post_url}">{title}</a></h2>\n'
+        "            <hr>\n"
+        f'            <p class="date">{date_str}</p>\n'
+        "            <br>\n"
+        f"            {body_html}\n"
+        "            <!-- END_LATEST_POST -->"
+    )
 
     content = re.sub(
         r"<!-- LATEST_POST -->.*?<!-- END_LATEST_POST -->",
@@ -257,10 +270,11 @@ class BlogPoster(tk.Tk):
         with open(post_path, "w", encoding="utf-8") as f:
             f.write(post_html)
 
-        # rebuild nav only
+        # update dropdown in ALL html files
         entries = parse_entries_from_posts()
         dropdown_html = build_dropdown_html(entries)
-        update_nav_file(dropdown_html)
+        for html_file in get_all_html_files():
+            update_dropdown_in_file(html_file, dropdown_html)
 
         # update index latest post
         update_latest_post_on_index(title, date_str, body_html, post_url)
